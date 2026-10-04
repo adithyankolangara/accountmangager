@@ -1,11 +1,14 @@
-import { useEffect, useState } from 'react';
-import { NavLink, Outlet } from 'react-router';
+import { Suspense, useEffect, useState } from 'react';
+import { Link, NavLink, Outlet } from 'react-router';
+import { useUser } from '../auth/session';
 import { applyThemePreference, readThemePreference, type ThemePreference } from '../theme';
+import { LoadingRows } from '../ui/components';
 import { navigation } from './navigation';
 import './AppShell.css';
 
 export function AppShell() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const user = useUser();
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -32,11 +35,18 @@ export function AppShell() {
           <span aria-hidden="true">☰</span>
           <span className="visually-hidden">Menu</span>
         </button>
-        <span className="brand">
+        <Link to="/" className="brand">
           <img src="/favicon.svg" alt="" width={28} height={28} />
           SmartFin
-        </span>
+        </Link>
+        <Link to="/transactions/new" className="btn btn-primary header-add">
+          Add transaction
+        </Link>
         <ThemeSelect />
+        <Link to="/settings" className="avatar" title={`${user.displayName} · Settings`}>
+          <span aria-hidden="true">{user.displayName.trim().charAt(0).toUpperCase() || '?'}</span>
+          <span className="visually-hidden">Settings for {user.displayName}</span>
+        </Link>
       </header>
 
       <nav id="primary-nav" className="shell-nav" data-open={menuOpen} aria-label="Primary">
@@ -59,7 +69,7 @@ export function AppShell() {
                   ) : (
                     <NavLink
                       to={item.to}
-                      end
+                      end={item.to === '/'}
                       className="nav-item"
                       onClick={() => setMenuOpen(false)}
                     >
@@ -77,8 +87,13 @@ export function AppShell() {
       ) : null}
 
       <main id="main" className="shell-main" tabIndex={-1}>
-        <Outlet />
+        <Suspense fallback={<LoadingRows rows={4} />}>
+          <Outlet />
+        </Suspense>
       </main>
+      <Link to="/transactions/new" className="fab" aria-label="Add transaction">
+        +
+      </Link>
     </div>
   );
 }

@@ -19,10 +19,11 @@ export const navigation: NavGroup[] = [
   {
     label: 'Money',
     items: [
-      { label: 'Transactions', to: '/transactions', comingIn: 'M2' },
-      { label: 'Accounts', to: '/accounts', comingIn: 'M2' },
-      { label: 'Cash & wallets', to: '/cash', comingIn: 'M2' },
-      { label: 'Income', to: '/income', comingIn: 'M2' },
+      { label: 'Transactions', to: '/transactions' },
+      { label: 'Accounts', to: '/accounts' },
+      { label: 'Cash & wallets', to: '/cash' },
+      { label: 'Income', to: '/income' },
+      { label: 'Reports', to: '/reports' },
     ],
   },
   {
@@ -48,14 +49,13 @@ export const navigation: NavGroup[] = [
     items: [
       { label: 'Budgets', to: '/budgets', comingIn: 'M4' },
       { label: 'Goals', to: '/goals', comingIn: 'M4' },
-      { label: 'Reports', to: '/reports', comingIn: 'M6' },
     ],
   },
   {
     label: 'Household',
     items: [
       { label: 'Family', to: '/family', comingIn: 'M1' },
-      { label: 'Settings', to: '/settings/profile', comingIn: 'M1' },
+      { label: 'Settings', to: '/settings' },
     ],
   },
 ];

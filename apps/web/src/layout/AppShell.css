@@ -28,6 +28,30 @@
   font-weight: 700;
   font-size: var(--text-lg);
   margin-right: auto;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.header-add {
+  display: none;
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  color: var(--primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+@media (max-width: 480px) {
+  .theme-select {
+    display: none;
+  }
 }
 
 .menu-button {
@@ -143,6 +167,10 @@ a.nav-item.active {
   .menu-button,
   .nav-backdrop {
     display: none;
+  }
+
+  .header-add {
+    display: inline-flex;
   }
 
   .shell-nav {
