@@ -85,18 +85,20 @@ feature/* ──PR──▶ develop ──PR──▶ main ──▶ Deploy work
 
 ### API (Render)
 
-| Variable                | Required | Default                           | Secret  | Purpose                                                              |
-| ----------------------- | :------: | --------------------------------- | :-----: | -------------------------------------------------------------------- |
-| `NODE_ENV`              |   yes    | `development`                     |   no    | `production` on Render                                               |
-| `DATABASE_URL`          |   prod   | —                                 | **yes** | Set automatically from `smartfin-db` (internal URL, private network) |
-| `PORT`                  |    no    | `4000`                            |   no    | Render injects its own                                               |
-| `MIGRATE_ON_START`      |    no    | `true` (non-prod), `false` (prod) |   no    | Blueprint sets `true` for the free plan                              |
-| `TRUST_PROXY_HOPS`      |    no    | `0`                               |   no    | `2` behind Vercel + Render (correct client IP for rate limiting)     |
-| `RATE_LIMIT_PER_MINUTE` |    no    | `300`                             |   no    | Per client IP, health checks excluded                                |
-| `API_DOCS_ENABLED`      |    no    | `true`                            |   no    | Serves Swagger UI at `/api/docs`                                     |
-| `LOG_LEVEL`             |    no    | `info`                            |   no    | `fatal` … `trace`                                                    |
-| `APP_VERSION`           |    no    | package version + Render commit   |   no    | Override the reported version                                        |
-| `PGLITE_DATA_DIR`       |    no    | `.data/pglite`                    |   no    | Local development only                                               |
+| Variable                |  Required   | Default                           | Secret  | Purpose                                                                                                                             |
+| ----------------------- | :---------: | --------------------------------- | :-----: | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`              |     yes     | `development`                     |   no    | `production` on Render                                                                                                              |
+| `DATABASE_URL`          |    prod     | —                                 | **yes** | Set automatically from `smartfin-db` (internal URL, private network)                                                                |
+| `PORT`                  |     no      | `4000`                            |   no    | Render injects its own                                                                                                              |
+| `MIGRATE_ON_START`      |     no      | `true` (non-prod), `false` (prod) |   no    | Blueprint sets `true` for the free plan                                                                                             |
+| `TRUST_PROXY_HOPS`      |     no      | `0`                               |   no    | `2` behind Vercel + Render (correct client IP for rate limiting)                                                                    |
+| `RATE_LIMIT_PER_MINUTE` |     no      | `300`                             |   no    | Per client IP, health checks excluded                                                                                               |
+| `AUTH_RATE_LIMIT`       |     no      | `10`                              |   no    | Sign-in attempts per IP and email per 15 min; sign-ups per IP per hour                                                              |
+| `WEB_ORIGINS`           | recommended | —                                 |   no    | Comma-separated web origins allowed to make signed-in changes, e.g. `https://smartfin.vercel.app`; add once the Vercel URL is known |
+| `API_DOCS_ENABLED`      |     no      | `true`                            |   no    | Serves Swagger UI at `/api/docs`                                                                                                    |
+| `LOG_LEVEL`             |     no      | `info`                            |   no    | `fatal` … `trace`                                                                                                                   |
+| `APP_VERSION`           |     no      | package version + Render commit   |   no    | Override the reported version                                                                                                       |
+| `PGLITE_DATA_DIR`       |     no      | `.data/pglite`                    |   no    | Local development only                                                                                                              |
 
 ### GitHub Actions
 

@@ -2,7 +2,7 @@
 
 Personal and family finance manager for India: accounts, cash, income and expenses, loans and EMIs, credit cards, chitty, FD/RD, SIPs, gold, budgets, reminders and reports. Each person's records are private unless they choose to share them with their family.
 
-**Status:** M0 (foundation) complete. See the [milestone plan](docs/milestones.md).
+**Status:** M2 (core money) complete: sign-in, accounts, cash and wallets, transactions, income, statement import, reports and demo data. Family sharing (rest of M1) is next. See the [milestone plan](docs/milestones.md).
 
 |          |                                                                      |
 | -------- | -------------------------------------------------------------------- |

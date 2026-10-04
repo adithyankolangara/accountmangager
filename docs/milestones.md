@@ -17,14 +17,17 @@ Legend: ✅ done · 🟡 in progress · ⏳ blocked on an external step or appro
 | Shared package: money (decimal), Indian formatting, date helpers, API schemas                                                       | ✅                                                                                              |
 | Web skeleton: design tokens (light/dark), app shell, status dashboard, not-found page                                               | ✅                                                                                              |
 | Unit and integration tests (Vitest)                                                                                                 | ✅                                                                                              |
-| CI workflow (lint, typecheck, test, build, `npm audit`), deploy workflow, release workflow                                          | ✅ written, ⏳ runs once pushed to GitHub                                                       |
+| CI workflow (lint, typecheck, test, build, `npm audit`), deploy workflow, release workflow                                          | ✅ written, ⏳ needs the GitHub secrets in the deployment guide                                 |
 | `render.yaml` blueprint, `vercel.json`, deployment guide, `.env.example`                                                            | ✅                                                                                              |
 | **Exit:** web and API deployed, health checks pass, secrets configured safely                                                       | ⏳ needs your GitHub, Vercel and Render accounts (see [deployment guide](deployment/README.md)) |
 
 ## M1 – Identity and family
 
-- Sign-up, email verification, sign-in and sign-out, password reset, session list and revocation, Argon2id, CSRF, auth rate limits.
-- Profile: name, currency, time zone, date format. Privacy notice and consent record.
+**Done early (needed by M2):** sign-up, sign-in, sign-out, server-side sessions (cookie for web, bearer for Android), Argon2id, CSRF, auth rate limits, profile (name, time zone), privacy notice and consent record, audit events for auth, and owner-only isolation with tests (A1, A2, A11).
+
+**Still to do:**
+
+- Email verification, password reset, session list and revocation (password reset needs the email provider).
 - Families: create, invite by email or link, accept, decline, revoke, resend; roles, ownership transfer, leave or remove.
 - Sharing model: `visibility` / `family_access` / `sharing_grants` tables and the `authz` module with its SQL predicate builder.
 - Audit events for every action in [permissions §7](permissions.md#7-exports-and-audit).
@@ -34,15 +37,21 @@ Legend: ✅ done · 🟡 in progress · ⏳ blocked on an external step or appro
 
 ## M2 – Core money
 
-- Accounts (bank, cash, wallet, joint), balance observations, reconciliation.
-- Transactions of every type, using the double-entry-safe ledger rules ([ERD §2](erd.md#2-core-money-accounts-cash-transactions-income)). Categories (system defaults plus custom), tags, recurring rules, soft delete with audit history, duplicate detection.
-- Income sources with expected vs received amounts.
-- CSV/XLSX statement import: upload → map → preview → confirm, with idempotency keys and duplicate flags.
-- Receipts as attachments (storage driver).
-- Synthetic demo data generator and "reset demo data".
-- Basic monthly income/expense report.
-- **Approval needed:** an object-storage provider for receipts in staging and production.
-- **Exit:** e2e flows for account → expense → transfer → card-free report all pass; ledger unit tests pass.
+| Deliverable                                                                                                                                                                                                     | Status                                                                       |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Accounts (savings, salary, current, joint, cash, wallet), calculated balances, balance checks and reconciliation adjustments                                                                                    | ✅                                                                           |
+| Transactions: expense, income, transfer, refund (plus system adjustments), ledger rules enforced in SQL constraints, categories (30 built-in plus custom), tags, references, search, filters, cursor pagination | ✅                                                                           |
+| Soft delete and restore, field-level change history (audit), optimistic concurrency (409 on stale edits), duplicate warnings                                                                                    | ✅                                                                           |
+| Income sources with expected vs received per month (monthly, quarterly, yearly, irregular)                                                                                                                      | ✅                                                                           |
+| CSV/XLSX statement import: parse in the browser → match columns → duplicate check → commit with Idempotency-Key                                                                                                 | ✅                                                                           |
+| Synthetic demo data (about 90 days, fictional banks and merchants) with load and reset                                                                                                                          | ✅                                                                           |
+| Monthly report: income, spending net of refunds, savings rate, by category, payment method and account                                                                                                          | ✅                                                                           |
+| Dashboard: liquid funds, monthly totals, spending by category, accounts, recent transactions, income status                                                                                                     | ✅                                                                           |
+| Recurring transactions                                                                                                                                                                                          | ⬜ moved to M3 (needs the job runner)                                        |
+| Receipts as attachments                                                                                                                                                                                         | ⏳ needs an object-storage provider (approval)                               |
+| Bulk edit                                                                                                                                                                                                       | ⬜ moved to M6                                                               |
+| Tests: 82 API (including isolation, ledger, import idempotency), 69 shared, 15 web                                                                                                                              | ✅                                                                           |
+| **Exit:** account → expense → transfer → report flows work end to end; ledger tests pass                                                                                                                        | ✅ in API integration tests; browser e2e (Playwright) arrives with M1-family |
 
 ## M3 – Commitments
 
@@ -50,6 +59,7 @@ Legend: ✅ done · 🟡 in progress · ⏳ blocked on an external step or appro
 - Credit cards: statements, minimum due, payments (as liability settlements), purchase-to-EMI plans.
 - Chitty: contributions, dividends and penalties, auction payout with deductions breakdown, remaining obligations.
 - Reminders: generated from schedules, in-app notification centre, snooze and complete, quiet hours, the job runner (ADR-008).
+- Recurring transactions (moved from M2; they need the job runner).
 - **Exit:** EMI and schedule unit tests match reference amortisation tables; due dates are right across month ends and IST time-zone boundaries.
 
 ## M4 – Wealth and planning

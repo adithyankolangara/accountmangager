@@ -66,7 +66,7 @@ Deviation from the PRD's suggested tree: unit and integration tests sit next to 
 - **Web:** token in an `HttpOnly; Secure; SameSite=Lax` cookie on the Vercel origin (first-party thanks to the rewrite).
 - **Android:** token in `Authorization: Bearer`, stored with Android Keystore-backed secure storage.
 - Idle timeout 30 days, absolute lifetime 90 days, token rotated on privilege change.
-- **CSRF** for cookie sessions: state-changing requests must carry `X-SmartFin-CSRF` (the session's CSRF token, returned by `/auth/session`). The `Origin` header must also match the allow-list. Bearer requests are exempt, since browsers don't attach them automatically.
+- **CSRF** for cookie sessions: state-changing requests must carry `X-SmartFin-CSRF`, the session's CSRF token returned by sign-in and `/auth/session`. The token is derived from the session token (`SHA-256("csrf:" + token)`), so nothing extra is stored and it can't be computed without the HttpOnly cookie. When `WEB_ORIGINS` is set, the `Origin` header must also be on that list. Bearer requests are exempt, since browsers don't attach them automatically. The API only parses JSON bodies, so cross-site HTML forms can't post to it.
 - Email verification and password-reset tokens are single-use, hashed, and expire after 24 h and 30 min respectively.
 - Optional Google sign-in (M1) uses the OpenID Connect authorization-code flow on the server. Accounts are linked by verified email only after the user confirms.
 - Clients never send roles. The server loads them for every request.

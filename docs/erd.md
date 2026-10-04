@@ -43,7 +43,6 @@ erDiagram
     uuid id PK
     uuid user_id FK
     text token_hash UK "sha256 hex"
-    text csrf_token_hash "sha256 hex"
     text client "web|android"
     text user_agent
     timestamptz last_seen_at
@@ -129,8 +128,7 @@ erDiagram
   categories ||--o{ categories : parent
   recurring_rules ||--o{ transactions : generates
   import_batches ||--o{ transactions : imports
-  income_sources ||--o{ income_expectations : expects
-  income_expectations |o--o| transactions : "received by"
+  income_sources ||--o{ transactions : "received as (income_source_id)"
 
   accounts {
     uuid id PK
@@ -143,35 +141,35 @@ erDiagram
     text branch
     numeric opening_balance
     date opening_date
-    numeric current_balance "cached; recomputed from ledger + adjustments"
-    timestamptz balance_as_of
-    text value_source
     char3 currency
     text status "active|closed"
   }
   transactions {
     uuid id PK
     OWNED ownership
+    bigint seq "insertion order; stable pagination"
     text type "income|expense|transfer|refund|adjustment|liability_payment"
     numeric amount "always > 0; direction from type"
     char3 currency
-    timestamptz occurred_at
-    date value_date
+    timestamptz occurred_at "optional exact time"
+    date value_date "financial date"
     uuid account_id FK "source (or destination for income)"
     uuid counter_account_id FK "transfer target"
     uuid card_id FK "card purchase / card payment target"
     uuid category_id FK
-    text payment_method "upi|card|netbanking|cash|cheque|other"
+    uuid income_source_id FK
+    text payment_method "upi|debit_card|credit_card|netbanking|cash|cheque|auto_debit|other"
+    text reference "UTR/RRN/cheque no."
     text merchant
     text description
     text_arr tags
-    text source "manual|import|message_draft|recurring|system"
+    text source "manual|import|demo|message_draft|recurring|system"
     text status "pending|cleared|reconciled"
     text linked_entity_type "loan_installment|card_emi_installment|chitty_entry|deposit_installment|sip_installment|goal"
     uuid linked_entity_id
     uuid import_batch_id FK
     uuid recurring_rule_id FK
-    text dedupe_fingerprint "sha256 hex of ref id, amount, date, account last4"
+    text direction "in|out, adjustments only"
     timestamptz deleted_at
   }
   balance_observations {
@@ -213,23 +211,25 @@ erDiagram
   income_sources {
     uuid id PK
     OWNED ownership
-    text kind "salary|freelance|business|rent|interest|dividend|bonus|refund|custom"
+    text kind "salary|business|freelance|rent|interest|dividend|bonus|pension|other"
     text name
-    uuid recipient_user_id FK
     numeric expected_amount
-    text frequency
+    text frequency "monthly|quarterly|yearly|irregular"
+    date start_date "anchor for quarterly/yearly"
+    smallint expected_day
     uuid receiving_account_id FK
     text tax_notes
-  }
-  income_expectations {
-    uuid id PK
-    uuid income_source_id FK
-    date period_start
-    numeric expected_amount
-    uuid received_transaction_id FK
-    text status "pending|received|partial|missed"
+    bool active
+    bool is_demo
   }
 ```
+
+As built in M2:
+
+- **Balances are calculated, not stored:** opening balance plus every non-deleted transaction dated from the opening date to today (`services/api/src/modules/ledger.ts`). A stored balance could drift; a calculation can't.
+- **Expected vs received** is calculated per month: expected from the source's amount and frequency, received from income transactions linked by `income_source_id`. There is no separate expectations table to keep in sync.
+- **Duplicates** are found by query (same account, type and amount within 2 days, then compared by reference or date and description), so there is no stored fingerprint yet. Message drafts (M5) may add one.
+- `accounts.is_demo`, `income_sources.is_demo` and `transactions.source = 'demo'` mark synthetic data so reset removes exactly that.
 
 Ledger rules:
 
@@ -618,12 +618,12 @@ erDiagram
 
 ## Not stored on the server
 
-- **Message-assistant drafts and processing history:** kept in on-device storage only. Raw message text is discarded after parsing. Only confirmed, normalized transaction fields plus `dedupe_fingerprint` are sent.
+- **Message-assistant drafts and processing history:** kept in on-device storage only. Raw message text is discarded after parsing. Only confirmed, normalized transaction fields are sent (plus a one-way fingerprint for duplicate detection, added in M5).
 - **Idempotency keys:** a `idempotency_keys(user_id, key, request_hash, response, expires_at)` table with a 24 h TTL. It's operational, so it's omitted from the diagrams above.
 
 ## Key indexes (planned)
 
-- `transactions (owner_id, occurred_at desc) where deleted_at is null`; `(family_id, visibility, occurred_at desc)`; `(account_id, occurred_at)`; unique `(owner_id, dedupe_fingerprint) where dedupe_fingerprint is not null and deleted_at is null`.
+- `transactions (owner_id, value_date desc, seq desc) where deleted_at is null`; `(account_id, value_date)`; `(counter_account_id)`; `(category_id)`, `(income_source_id)`, `(import_batch_id)` (built in M2). `(family_id, visibility, value_date desc)` arrives with family sharing.
 - `sharing_grants (grantee_id, record_type, record_id) where revoked_at is null`.
 - `family_members (user_id) where status = 'active'`.
 - `user_sessions (token_hash)` unique; `email_tokens (token_hash)` unique.
