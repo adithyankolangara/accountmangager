@@ -1,0 +1,35 @@
+# Dependencies and build output
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Local data (PGlite database, uploaded files in development)
+.data/
+
+# Environment and secrets: never commit real values
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+google-services.json
+firebase-service-account*.json
+service-account*.json
+
+# Android build output (M5)
+apps/android/android/app/build/
+apps/android/android/.gradle/
+*.apk
+*.aab
+
+# Tooling
+.vercel/
+.DS_Store
+Thumbs.db
+*.log
+playwright-report/
+test-results/
