@@ -20,6 +20,21 @@ const envSchema = z
     /** Number of reverse proxies in front of the API (Vercel rewrite + Render = 2). */
     TRUST_PROXY_HOPS: z.coerce.number().int().min(0).default(0),
     RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(300),
+    /** Sign-in attempts per IP and email per 15 minutes (sign-ups: per IP per hour). */
+    AUTH_RATE_LIMIT: z.coerce.number().int().positive().default(10),
+    /**
+     * Comma-separated origins allowed to make cookie-authenticated changes, e.g.
+     * "https://smartfin.vercel.app". Unset: only the CSRF token is checked.
+     */
+    WEB_ORIGINS: z
+      .string()
+      .optional()
+      .transform((v) =>
+        (v ?? '')
+          .split(',')
+          .map((o) => o.trim().replace(/\/$/, ''))
+          .filter(Boolean),
+      ),
     API_DOCS_ENABLED: z.stringbool().default(true),
     APP_VERSION: z.string().optional(),
     /** Set automatically by Render. */
@@ -43,6 +58,10 @@ export interface Config {
   migrateOnStart: boolean;
   trustProxyHops: number;
   rateLimitPerMinute: number;
+  authRateLimit: number;
+  webOrigins: string[];
+  /** Secure, __Host- prefixed session cookies (HTTPS only). */
+  secureCookies: boolean;
   apiDocsEnabled: boolean;
   version: string;
 }
@@ -73,6 +92,9 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
     migrateOnStart: env.MIGRATE_ON_START ?? env.NODE_ENV !== 'production',
     trustProxyHops: env.TRUST_PROXY_HOPS,
     rateLimitPerMinute: env.RATE_LIMIT_PER_MINUTE,
+    authRateLimit: env.AUTH_RATE_LIMIT,
+    webOrigins: env.WEB_ORIGINS,
+    secureCookies: env.NODE_ENV === 'production',
     apiDocsEnabled: env.API_DOCS_ENABLED,
     version: env.APP_VERSION ?? (commit ? `${pkg.version}+${commit}` : pkg.version),
   };

@@ -14,6 +14,18 @@ export class ApiError extends Error {
   }
 }
 
+/** 404 for both "doesn't exist" and "not yours", so ids never reveal other users' records. */
+export const notFound = (what: string) => new ApiError(404, 'not_found', `${what} not found`);
+export const conflict = (message: string, details?: unknown) =>
+  new ApiError(409, 'conflict', message, details);
+export const badRequest = (message: string, details?: unknown) =>
+  new ApiError(400, 'bad_request', message, details);
+export const forbidden = (message: string) => new ApiError(403, 'forbidden', message);
+
+/** Field-level validation error, in the same shape as Zod failures. */
+export const invalidField = (path: string, message: string) =>
+  new ApiError(400, 'validation_failed', message, [{ path, message }]);
+
 export function errorBody(
   code: ErrorCode,
   message: string,
@@ -49,9 +61,10 @@ export const errorHandler: ErrorRequestHandler = (err: unknown, req, res, next) 
     return;
   }
   if (err instanceof ZodError) {
-    res
-      .status(400)
-      .json(errorBody('validation_failed', 'Request validation failed', requestId, err.issues));
+    const details = err.issues.map((i) => ({ path: i.path.join('.'), message: i.message }));
+    const message =
+      details.length === 1 ? details[0]!.message : 'Please correct the highlighted fields';
+    res.status(400).json(errorBody('validation_failed', message, requestId, details));
     return;
   }
   const httpErr = err as HttpLikeError;

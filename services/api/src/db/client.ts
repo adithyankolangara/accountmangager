@@ -12,6 +12,14 @@ import { MIGRATIONS_SCHEMA, MIGRATIONS_TABLE, migrationsFolder } from './migrati
 import * as schema from './schema';
 
 export type Database = PgDatabase<PgQueryResultHKT, typeof schema>;
+export type DbTransaction = Parameters<Parameters<Database['transaction']>[0]>[0];
+/** Anything queries can run on: the database or an open transaction. */
+export type Executor = Database | DbTransaction;
+
+/** Both drivers (node-postgres and PGlite) return raw query results as `{ rows }`. */
+export function rowsOf<T>(result: unknown): T[] {
+  return (result as { rows: T[] }).rows;
+}
 
 export interface DatabaseHandle {
   db: Database;
@@ -69,13 +77,13 @@ function buildHandle(
       await db.execute(sql`select 1`);
     },
     async appliedMigrationCount() {
-      const [table] = rows<{ exists: boolean }>(
+      const [table] = rowsOf<{ exists: boolean }>(
         await db.execute(
           sql`select to_regclass(${`${MIGRATIONS_SCHEMA}.${MIGRATIONS_TABLE}`}) is not null as exists`,
         ),
       );
       if (!table?.exists) return 0;
-      const [result] = rows<{ count: number }>(
+      const [result] = rowsOf<{ count: number }>(
         await db.execute(
           sql`select count(*)::int as count from ${sql.identifier(MIGRATIONS_SCHEMA)}.${sql.identifier(MIGRATIONS_TABLE)}`,
         ),
@@ -83,9 +91,4 @@ function buildHandle(
       return result?.count ?? 0;
     },
   };
-}
-
-/** Both drivers (node-postgres and PGlite) return raw query results as `{ rows }`. */
-function rows<T>(result: unknown): T[] {
-  return (result as { rows: T[] }).rows;
 }

@@ -8,6 +8,20 @@
       "when": 1791120073209,
       "tag": "0000_foundation_identity_audit",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791122855817,
+      "tag": "0001_core_money",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791122857277,
+      "tag": "0002_seed_system_categories",
+      "breakpoints": true
     }
   ]
 }

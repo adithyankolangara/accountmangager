@@ -28,9 +28,11 @@ export const userSessions = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    /** SHA-256 (hex) of the session token. The token itself is never stored. */
+    /**
+     * SHA-256 (hex) of the session token. The token itself is never stored. The CSRF token is
+     * derived from the session token (auth/sessions.ts), so it needs no column.
+     */
     tokenHash: text('token_hash').notNull().unique(),
-    csrfTokenHash: text('csrf_token_hash').notNull(),
     client: text('client', { enum: ['web', 'android'] }).notNull(),
     userAgent: text('user_agent'),
     createdAt: timestamptz('created_at').notNull().defaultNow(),
@@ -43,4 +45,20 @@ export const userSessions = pgTable(
     index('user_sessions_user_idx').on(t.userId),
     check('user_sessions_client_check', sql`${t.client} in ('web', 'android')`),
   ],
+);
+
+/** What the user agreed to, and when (privacy notice now; message assistant, sync later). */
+export const consents = pgTable(
+  'consents',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(),
+    version: text('version').notNull(),
+    grantedAt: timestamptz('granted_at').notNull().defaultNow(),
+    withdrawnAt: timestamptz('withdrawn_at'),
+  },
+  (t) => [index('consents_user_idx').on(t.userId, t.kind)],
 );

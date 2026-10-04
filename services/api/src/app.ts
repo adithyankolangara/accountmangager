@@ -1,19 +1,37 @@
 import { randomUUID } from 'node:crypto';
-import express, { type Express } from 'express';
+import express, { Router, type Express } from 'express';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import type { Logger } from 'pino';
 import { pinoHttp } from 'pino-http';
 import swaggerUi from 'swagger-ui-express';
 import { API_PREFIX, REQUEST_ID_HEADER } from '@smartfin/shared';
+import { authenticate, cookieSettings, csrfProtection, requireAuth } from './auth/middleware';
 import type { Config } from './config';
 import type { DatabaseHandle } from './db/client';
 import { errorBody, errorHandler, notFoundHandler } from './http/errors';
+import { accountsRouter } from './modules/accounts';
+import { authRouter } from './modules/auth';
+import { categoriesRouter } from './modules/categories';
+import { demoRouter } from './modules/demo';
+import { importsRouter } from './modules/imports';
+import { incomeRouter } from './modules/income';
+import { reportsRouter } from './modules/reports';
+import { transactionsRouter } from './modules/transactions';
 import { buildOpenApiDocument } from './openapi';
 import { healthRouter } from './routes/health';
 
 export interface AppDeps {
-  config: Pick<Config, 'trustProxyHops' | 'rateLimitPerMinute' | 'apiDocsEnabled' | 'version'>;
+  config: Pick<
+    Config,
+    | 'trustProxyHops'
+    | 'rateLimitPerMinute'
+    | 'authRateLimit'
+    | 'webOrigins'
+    | 'secureCookies'
+    | 'apiDocsEnabled'
+    | 'version'
+  >;
   logger: Logger;
   database: DatabaseHandle;
   expectedMigrations: number;
@@ -71,7 +89,8 @@ export function createApp({ config, logger, database, expectedMigrations }: AppD
     }),
   );
 
-  app.use(express.json({ limit: '1mb' }));
+  // 2 MB fits a 5,000-row statement import.
+  app.use(express.json({ limit: '2mb' }));
 
   const openApiDocument = buildOpenApiDocument(config.version);
   app.get(`${API_PREFIX}/openapi.json`, (_req, res) => {
@@ -80,6 +99,22 @@ export function createApp({ config, logger, database, expectedMigrations }: AppD
   if (config.apiDocsEnabled) {
     app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));
   }
+
+  const cookie = cookieSettings(config.secureCookies);
+  app.use(API_PREFIX, authenticate(database, cookie), csrfProtection(config.webOrigins));
+  app.use(API_PREFIX, authRouter({ database, cookie, authRateLimit: config.authRateLimit }));
+
+  // Everything below requires a signed-in user; every query is scoped to that user.
+  const protectedRoutes = Router();
+  protectedRoutes.use(requireAuth);
+  protectedRoutes.use(accountsRouter({ database }));
+  protectedRoutes.use(categoriesRouter({ database }));
+  protectedRoutes.use(transactionsRouter({ database }));
+  protectedRoutes.use(incomeRouter({ database }));
+  protectedRoutes.use(importsRouter({ database }));
+  protectedRoutes.use(reportsRouter({ database }));
+  protectedRoutes.use(demoRouter({ database }));
+  app.use(API_PREFIX, protectedRoutes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

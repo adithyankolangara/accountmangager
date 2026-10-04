@@ -73,11 +73,16 @@ describe('correlation ids', () => {
 
 describe('errors', () => {
   it('returns the standard error body for unknown routes', async () => {
-    const res = await request(app).get('/api/v1/nope').set('X-Request-Id', 'req-1').expect(404);
+    const res = await request(app).get('/nope').set('X-Request-Id', 'req-1').expect(404);
     expect(errorBody.parse(res.body).error).toMatchObject({
       code: 'not_found',
       requestId: 'req-1',
     });
+  });
+
+  it('asks unauthenticated callers to sign in before revealing which API routes exist', async () => {
+    const res = await request(app).get('/api/v1/nope').expect(401);
+    expect(res.body.error.code).toBe('unauthenticated');
   });
 
   it('rejects malformed JSON with 400', async () => {
@@ -93,7 +98,7 @@ describe('errors', () => {
     const res = await request(app)
       .post('/api/v1/anything')
       .set('Content-Type', 'application/json')
-      .send(JSON.stringify({ blob: 'x'.repeat(1_100_000) }))
+      .send(JSON.stringify({ blob: 'x'.repeat(2_100_000) }))
       .expect(413);
     expect(res.body.error.code).toBe('bad_request');
   });

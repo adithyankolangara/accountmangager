@@ -30,8 +30,29 @@ describe('migrations', () => {
       sql`select table_name from information_schema.tables where table_schema = 'public' order by 1`,
     )) as unknown as { rows: { table_name: string }[] };
     expect(result.rows.map((r) => r.table_name)).toEqual(
-      expect.arrayContaining(['audit_events', 'user_sessions', 'users']),
+      expect.arrayContaining([
+        'audit_events',
+        'user_sessions',
+        'users',
+        'consents',
+        'accounts',
+        'balance_observations',
+        'categories',
+        'income_sources',
+        'import_batches',
+        'transactions',
+      ]),
     );
+  });
+
+  it('seeds the built-in categories', async () => {
+    const result = (await database.db.execute(
+      sql`select kind, count(*)::int as n from categories where owner_id is null group by kind order by kind`,
+    )) as unknown as { rows: { kind: string; n: number }[] };
+    expect(result.rows).toEqual([
+      { kind: 'expense', n: 20 },
+      { kind: 'income', n: 10 },
+    ]);
   });
 });
 
@@ -62,14 +83,13 @@ describe('constraints', () => {
     const expires = new Date(Date.now() + 60_000);
     await expect(
       database.db.execute(
-        sql`insert into user_sessions (user_id, token_hash, csrf_token_hash, client, idle_expires_at, absolute_expires_at)
-            values (${user!.id}, 'h1', 'c1', 'desktop', ${expires.toISOString()}, ${expires.toISOString()})`,
+        sql`insert into user_sessions (user_id, token_hash, client, idle_expires_at, absolute_expires_at)
+            values (${user!.id}, 'h1', 'desktop', ${expires.toISOString()}, ${expires.toISOString()})`,
       ),
     ).rejects.toThrow();
     await database.db.insert(userSessions).values({
       userId: user!.id,
       tokenHash: 'h2',
-      csrfTokenHash: 'c2',
       client: 'web',
       idleExpiresAt: expires,
       absoluteExpiresAt: expires,
