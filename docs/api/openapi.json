@@ -1,0 +1,209 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SmartFin API",
+    "version": "0.1.0",
+    "description": "Personal and family finance API. Amounts are decimal strings; instants are ISO 8601 UTC."
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "Health": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          },
+          "version": {
+            "type": "string",
+            "example": "0.1.0+3f2a1c9"
+          },
+          "uptimeSeconds": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "time": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "status",
+          "version",
+          "uptimeSeconds",
+          "time"
+        ],
+        "description": "Liveness: the API process is running."
+      },
+      "Readiness": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "not_ready"
+            ]
+          },
+          "checks": {
+            "type": "object",
+            "properties": {
+              "database": {
+                "type": "string",
+                "enum": [
+                  "ok",
+                  "error"
+                ]
+              },
+              "migrations": {
+                "type": "string",
+                "enum": [
+                  "ok",
+                  "pending",
+                  "error"
+                ]
+              }
+            },
+            "required": [
+              "database",
+              "migrations"
+            ]
+          }
+        },
+        "required": [
+          "status",
+          "checks"
+        ],
+        "description": "Readiness: the database is reachable and all migrations are applied."
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "bad_request",
+                  "validation_failed",
+                  "unauthenticated",
+                  "forbidden",
+                  "not_found",
+                  "conflict",
+                  "rate_limited",
+                  "internal_error",
+                  "service_unavailable"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {},
+              "requestId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "description": "Every API error uses this shape."
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "summary": "Liveness check",
+        "responses": {
+          "200": {
+            "description": "The API process is running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health/ready": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "summary": "Readiness check (database reachable, migrations applied)",
+        "responses": {
+          "200": {
+            "description": "Ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Readiness"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Not ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Readiness"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/openapi.json": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "summary": "This OpenAPI document",
+        "responses": {
+          "200": {
+            "description": "OpenAPI 3.1 document",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {}
+}
