@@ -1,0 +1,73 @@
+name: Deploy
+
+# Production deploys run only from main, only after CI passes, and only inside the protected
+# "production" environment (configure required reviewers in GitHub → Settings → Environments).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  api:
+    name: Deploy API to Render
+    needs: ci
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+    steps:
+      - name: Trigger Render deploy hook
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          test -n "$RENDER_DEPLOY_HOOK_URL" || { echo "::error::RENDER_DEPLOY_HOOK_URL secret is not set"; exit 1; }
+          curl --fail --silent --show-error -X POST "${RENDER_DEPLOY_HOOK_URL}&ref=${GITHUB_SHA}" > /dev/null
+      - name: Wait for the new version to report ready
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+        run: |
+          test -n "$API_BASE_URL" || { echo "::error::API_BASE_URL repository variable is not set"; exit 1; }
+          short_sha="${GITHUB_SHA::7}"
+          for attempt in $(seq 1 60); do
+            version=$(curl --silent --max-time 10 "$API_BASE_URL/api/v1/health" | jq -r '.version // empty' || true)
+            if [[ "$version" == *"+$short_sha" ]]; then
+              curl --fail --silent --max-time 10 "$API_BASE_URL/api/v1/health/ready"
+              echo; echo "API $version is live and ready"; exit 0
+            fi
+            echo "Waiting for $short_sha (live: ${version:-unreachable}), attempt $attempt/60"
+            sleep 15
+          done
+          echo "::error::API did not report version $short_sha within 15 minutes"; exit 1
+
+  web:
+    name: Deploy web to Vercel
+    needs: api
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Build and deploy with the Vercel CLI
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          npx --yes vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
+          npx --yes vercel@latest build --prod --token="$VERCEL_TOKEN"
+          npx --yes vercel@latest deploy --prebuilt --prod --token="$VERCEL_TOKEN"

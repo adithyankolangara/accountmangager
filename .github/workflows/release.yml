@@ -1,0 +1,24 @@
+name: Release
+
+# Push a tag such as v0.1.0 on main to publish a GitHub release with generated notes.
+# The Android APK is attached here from M5.
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes --title "SmartFin $GITHUB_REF_NAME"

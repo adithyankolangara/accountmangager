@@ -1,0 +1,45 @@
+# Render Blueprint: Render dashboard → New → Blueprint → select this repository.
+# Spec: https://render.com/docs/blueprint-spec. See docs/deployment/README.md before syncing.
+services:
+  - type: web
+    name: smartfin-api
+    runtime: node
+    region: singapore # closest Render region to India
+    # "free" sleeps after ~15 min idle. Paid plans (e.g. "0.5c-512mb") need approval; see
+    # docs/architecture.md §5.
+    plan: free
+    buildCommand: npm ci && npm run build -w services/api
+    startCommand: npm run start -w services/api
+    # On a paid plan, run migrations before traffic switches and set MIGRATE_ON_START=false:
+    # preDeployCommand: npm run db:migrate:prod -w services/api
+    healthCheckPath: /api/v1/health/ready
+    # Deploys are triggered by .github/workflows/deploy.yml after CI passes.
+    autoDeployTrigger: 'off'
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: '24'
+      - key: DATABASE_URL
+        fromDatabase:
+          name: smartfin-db
+          property: connectionString
+      - key: MIGRATE_ON_START
+        value: 'true'
+      - key: TRUST_PROXY_HOPS
+        value: '2'
+      - key: LOG_LEVEL
+        value: info
+
+databases:
+  - name: smartfin-db
+    region: singapore
+    # The free database expires after 30 days and has no backups. Upgrade (needs approval)
+    # before storing any real data.
+    plan: free
+    databaseName: smartfin
+    user: smartfin
+    postgresMajorVersion: '17'
+    # Only the API connects, over Render's private network. Add your IP temporarily for a
+    # manual pg_dump/psql session.
+    ipAllowList: []
